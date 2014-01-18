@@ -12,10 +12,7 @@
 var document = this.document
   , window = this
   , root
-  , body
-  , h1
-  , open
-  , lights;
+  , body;
 
 /**
  * Initial Document Title
@@ -69,28 +66,12 @@ tty.open = function() {
   tty.elements = {
     root: document.documentElement,
     body: document.body,
-    h1: document.getElementsByTagName('h1')[0],
-    open: document.getElementById('open'),
-    lights: document.getElementById('lights')
   };
 
   root = tty.elements.root;
   body = tty.elements.body;
-  h1 = tty.elements.h1;
-  open = tty.elements.open;
-  lights = tty.elements.lights;
 
-  if (open) {
-    on(open, 'click', function() {
-      new Window;
-    });
-  }
-
-  if (lights) {
-    on(lights, 'click', function() {
-      tty.toggleLights();
-    });
-  }
+  window.TerminalWindow = Window;
 
   tty.socket.on('connect', function() {
     tty.reset();
@@ -183,20 +164,10 @@ tty.reset = function() {
 };
 
 /**
- * Lights
- */
-
-tty.toggleLights = function() {
-  root.className = !root.className
-    ? 'dark'
-    : '';
-};
-
-/**
  * Window
  */
 
-function Window(socket) {
+function Window(socket, params) {
   var self = this;
 
   EventEmitter.call(this);
@@ -231,6 +202,8 @@ function Window(socket) {
   this.bar = bar;
   this.button = button;
   this.title = title;
+
+  this.params = params;
 
   this.tabs = [];
   this.focused = null;
@@ -589,7 +562,9 @@ function Tab(win, socket) {
 
   win.tabs.push(this);
 
-  this.socket.emit('create', cols, rows, function(err, data) {
+  var params = this.window.params;
+
+  this.socket.emit('create', cols, rows, params, function(err, data) {
     if (err) return self._destroy();
     self.pty = data.pty;
     self.id = data.id;
@@ -618,7 +593,6 @@ Tab.prototype.handleTitle = function(title) {
 
   if (Terminal.focus === this) {
     document.title = title;
-    // if (h1) h1.innerHTML = title;
   }
 
   if (this.window.focused === this) {
@@ -701,11 +675,6 @@ Tab.prototype._destroy = function() {
   if (!win.tabs.length) {
     win.destroy();
   }
-
-  // if (!tty.windows.length) {
-  //   document.title = initialTitle;
-  //   if (h1) h1.innerHTML = initialTitle;
-  // }
 
   this.__destroy();
 };
